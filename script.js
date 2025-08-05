@@ -1001,7 +1001,7 @@ class DungeonFloor {
         if (floorNumber === 0) {
             this.type = 'start';
             this.cleared = true;
-            this.generatePortal();
+            // Non generiamo il portale qui, verrà generato quando il piano sarà completato
         } else if ((floorNumber + 1) % 10 === 0) {
             this.type = 'boss';
             this.initialMonsters = this.generateBossMonsters(floorNumber);
@@ -1009,7 +1009,7 @@ class DungeonFloor {
             this.type = 'merchant';
             this.initialMonsters = [];
             this.cleared = true;
-            this.generatePortal('merchant');
+            // Non generiamo il portale qui, verrà generato dopo il negozio
         } else if ((floorNumber + 1) % 10 === 9) {
             this.type = 'preBoss';
             this.initialMonsters = this.generateMonsters(floorNumber);
@@ -1203,6 +1203,11 @@ function loadFloor(floorNum) {
     player.y = CANVAS_HEIGHT / 2 + 50;
     player.isTransitioning = false;
 
+    // Genera il portale per il piano iniziale (non ha mostri)
+    if (currentDungeonFloor.type === 'start') {
+        currentDungeonFloor.generatePortal();
+    }
+
     updateHUD();
 
     if (currentDungeonFloor.type === 'merchant') {
@@ -1297,11 +1302,17 @@ function handleCollisions() {
         }
     }
 
+    // CORREZIONE PRINCIPALE: Controllo aggiuntivo per il portale
     if (currentDungeonFloor.cleared && currentDungeonFloor.portal) {
         const portal = currentDungeonFloor.portal;
         if (portal.checkCollision(player) && !player.isTransitioning) {
-            player.isTransitioning = true;
+            // Verifica che non ci siano mostri prima di procedere
+            if (monsters.length > 0) {
+                updateGameMessage("Devi sconfiggere tutti i mostri prima di procedere!");
+                return;
+            }
             
+            player.isTransitioning = true;
             setTimeout(() => {
                 loadFloor(currentFloor + 1);
             }, 100);
@@ -1309,12 +1320,14 @@ function handleCollisions() {
     }
 }
 
+// FUNZIONE MODIFICATA: checkFloorCompletion
 function checkFloorCompletion() {
-    if (currentDungeonFloor.type === 'monster' || currentDungeonFloor.type === 'boss' || currentDungeonFloor.type === 'preBoss') {
-        // Conta solo i mostri non in fase di spawn
-        const activeMonsters = monsters.filter(m => !m.isSpawning);
+    if (currentDungeonFloor.type === 'monster' || 
+        currentDungeonFloor.type === 'boss' || 
+        currentDungeonFloor.type === 'preBoss') {
         
-        if (activeMonsters.length === 0 && !currentDungeonFloor.cleared) {
+        // Controlliamo l'intero array monsters senza filtri
+        if (monsters.length === 0 && !currentDungeonFloor.cleared) {
             currentDungeonFloor.cleared = true;
             updateGameMessage(`Piano ${currentFloor + 1} completato!`);
             
@@ -1662,7 +1675,15 @@ function updateHUD() {
 function updateGameMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('game-message');
-    messageElement.textContent = message;
+    
+    // Aggiungi un'icona per i messaggi importanti
+    if (message.includes("Devi sconfiggere")) {
+        messageElement.innerHTML = '⚠️ ' + message;
+        messageElement.classList.add('warning-message');
+    } else {
+        messageElement.textContent = message;
+    }
+    
     gameMessagesDiv.prepend(messageElement);
 
     if (gameMessagesDiv.children.length > 5) {
@@ -1751,8 +1772,11 @@ window.addEventListener('load', () => {
 function exitMerchant() {
     hideAllScreens();
     gameState = 'playing';
+    
+    // Genera il portale dopo aver lasciato il negozio
+    currentDungeonFloor.generatePortal('merchant');
+    
     startGameLoop();
-    loadFloor(currentFloor + 1);
 }
 
 function returnToMenu() {
