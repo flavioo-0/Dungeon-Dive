@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Dive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="hud-container">
+            <div class="hud-left">
+                <div class="hud-item">❤️ HP: <span id="playerHp">0</span>/<span id="playerMaxHp">0</span></div>
+                <div class="hud-item">⚔️ ATK: <span id="playerAtk">0</span></div>
+                <div class="hud-item">🛡️ DEF: <span id="playerDef">0</span></div>
+                <div class="hud-item">👟 AGI: <span id="playerAgi">0</span></div>
+            </div>
+            <div class="hud-center">
+                <div class="floor-display">Piano <span id="currentFloorDisplay">1</span> / <span id="totalFloorsDisplay">100</span></div>
+            </div>
+            <div class="hud-right">
+                <div class="hud-item">🪙 Oro: <span id="playerGold">0</span></div>
+                <div class="hud-item">⭐ Livello: <span id="playerLevel">0</span></div>
+                <div class="hud-item">🔋 EXP: <span id="playerExp">0</span>/<span id="expToNextLevel">0</span></div>
+                <div class="exp-bar-container">
+                    <div id="exp-bar-fill" class="exp-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-messages" class="game-messages-container"></div>
+        
+        <div id="startScreen" class="game-screen">
+            <h1>Dungeon Dive</h1>
+            <p>Sconfiggi i mostri e scala la torre!</p>
+            <button id="startButton" class="game-btn">Inizia Partita</button>
+        </div>
+
+        <div id="gameOverScreen" class="game-screen hidden">
+            <h1>Game Over</h1>
+            <p>Sei stato sconfitto dai mostri...</p>
+            <button id="restartButton" class="game-btn">Riprova</button>
+        </div>
+
+        <div id="winScreen" class="game-screen hidden">
+            <h1>Congratulazioni!</h1>
+            <p>Hai scalato l'intera torre e sei il nuovo campione!</p>
+            <button id="playAgainButton" class="game-btn">Gioca Ancora</button>
+        </div>
+
+        <div id="merchantScreen" class="merchant-screen hidden">
+            <h2>Il Mercante Itinerante</h2>
+            <p id="merchant-message">Benvenuto, avventuriero! Cosa ti serve?</p>
+            <div id="merchant-upgrades" class="merchant-upgrades">
+                <h3>Potenziamenti</h3>
+            </div>
+            <div id="merchant-abilities" class="merchant-abilities">
+                <h3>Abilità</h3>
+            </div>
+            <button id="merchant-exit-button" class="game-btn">Continua</button>
+        </div>
+
+        <div id="pauseScreen" class="game-screen hidden">
+            <h1>PAUSA</h1>
+            <button id="resumeButton" class="game-btn">Riprendi</button>
+            <button id="menuButton" class="game-btn">Torna al Menu</button>
+            <button id="controlsButton" class="game-btn">Comandi</button>
+            <button id="indexButton" class="game-btn">Indice Mostri</button>
+        </div>
+
+        <div id="commandsScreen" class="game-screen hidden">
+            <h1>COMANDI</h1>
+            <div class="commands-list">
+                <p><strong>Movimento:</strong> Tasti W, A, S, D</p>
+                <p><strong>Sparare:</strong> Clic sinistro (tenere premuto per sparo continuo)</p>
+                <p><strong>Abilità:</strong></p>
+                <ul>
+                    <li>Dash: Tasto Q</li>
+                    <li>Palla di Fuoco: Tasto E</li>
+                    <li>Invisibilità: Tasto R</li>
+                </ul>
+                <p><strong>Menu Pausa:</strong> Tasto ESC</p>
+                <p><strong>Interagire con portali:</strong> Avvicinarsi</p>
+            </div>
+            <button id="commandsBackButton" class="game-btn">Indietro</button>
+        </div>
+        
+        <div id="indexDialog" class="game-screen hidden">
+            <h1>Indice dei Mostri</h1>
+            <div id="monstersInfo" class="monsters-info">
+                <!-- Le informazioni sui mostri verranno inserite qui tramite JavaScript -->
+            </div>
+            <button id="closeIndexButton" class="game-btn">Chiudi</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
