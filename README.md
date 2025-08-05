@@ -12,7 +12,7 @@ Un avvincente dungeon crawler roguelike a 2D in cui sfidi 100 piani di una torre
 - **Effetti visivi** per abilità speciali e status
 - Interfaccia utente completa con HUD dettagliato
 
-## Demo Giocabile
+## Beta Giocabile
 
 [Gioca online su GitHub Pages](https://flavioo-0.github.io/Dungeon-Dive)
 
