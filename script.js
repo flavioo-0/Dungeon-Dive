@@ -51,6 +51,7 @@ const PROJECTILE_SIZE = 8;
 const PLAYER_BASE_SPEED = 3;
 const PROJECTILE_SPEED = 8;
 const ROOM_BUFFER = 50;
+const SPAWN_SAFE_ZONE = 150; // Zona sicura attorno al giocatore dove i mostri non spawnano
 
 const TOWER_HEIGHT = 100;
 const BOSS_FLOOR_INTERVAL = 10;
@@ -537,6 +538,12 @@ class Monster extends Entity {
         this.maxAttackCooldown = typeData.cooldown;
         this.originalColor = typeData.color;
         this.originalSpeed = typeData.speed;
+        
+        // Aggiunte per effetto di spawn
+        this.spawnTimer = 60; // Timer di spawn (1 secondo a 60fps)
+        this.isSpawning = true;
+        this.spawnEffectSize = 0;
+        this.isInvincible = true; // Invincibile durante lo spawn
 
         this.abilityType = Array.isArray(typeData.abilityType) ? typeData.abilityType : (typeData.abilityType ? [typeData.abilityType] : []);
         this.abilityValue = typeData.abilityValue;
@@ -560,6 +567,18 @@ class Monster extends Entity {
     }
 
     update() {
+        // Gestione dello spawn
+        if (this.isSpawning) {
+            this.spawnTimer--;
+            this.spawnEffectSize = (1 - this.spawnTimer / 60) * this.size * 2;
+            
+            if (this.spawnTimer <= 0) {
+                this.isSpawning = false;
+                this.isInvincible = false; // Non più invincibile
+            }
+            return; // Non fare nulla finché non è completamente spawnato
+        }
+
         this.updateStatusEffects();
 
         let effectiveSpeed = this.originalSpeed;
@@ -863,7 +882,20 @@ class Monster extends Entity {
     }
 
     draw() {
-        super.draw();
+        if (this.isSpawning) {
+            // Disegna l'effetto di spawn
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.spawnTimer / 120})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.spawnEffectSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Disegna una preview del mostro semi-trasparente
+            ctx.globalAlpha = 0.5;
+            super.draw();
+            ctx.globalAlpha = 1.0;
+        } else {
+            super.draw();
+        }
         this.drawHealthBar();
     }
 }
@@ -964,6 +996,7 @@ class DungeonFloor {
         this.type = 'monster';
         this.cleared = false;
         this.portal = null;
+        this.spawnComplete = false;
 
         if (floorNumber === 0) {
             this.type = 'start';
@@ -1014,6 +1047,10 @@ class DungeonFloor {
             monsterPool = ['slime', 'druid', 'orc', 'skeleton', 'ghoul', 'necromancer', 'dwarf'];
         }
 
+        // Area sicura intorno al giocatore (nessun mostro spawnerà qui)
+        const playerCenterX = CANVAS_WIDTH / 2;
+        const playerCenterY = CANVAS_HEIGHT / 2 + 50;
+
         for (let i = 0; i < numMonsters; i++) {
             const monsterType = monsterPool[rand(0, monsterPool.length - 1)];
             const typeData = { ...monstersData[monsterType] };
@@ -1026,8 +1063,26 @@ class DungeonFloor {
             typeData.xp = Math.floor(typeData.xp * floorMultiplier);
             typeData.gold = Math.floor(typeData.gold * floorMultiplier);
 
-            const x = rand(ROOM_BUFFER, CANVAS_WIDTH - ROOM_BUFFER);
-            const y = rand(ROOM_BUFFER, CANVAS_HEIGHT - ROOM_BUFFER);
+            // Trova una posizione sicura lontano dal giocatore
+            let x, y;
+            let validPosition = false;
+            let attempts = 0;
+            
+            while (!validPosition && attempts < 100) {
+                x = rand(ROOM_BUFFER, CANVAS_WIDTH - ROOM_BUFFER);
+                y = rand(ROOM_BUFFER, CANVAS_HEIGHT - ROOM_BUFFER);
+                
+                // Verifica la distanza dal giocatore
+                const dx = x - playerCenterX;
+                const dy = y - playerCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > SPAWN_SAFE_ZONE) {
+                    validPosition = true;
+                }
+                
+                attempts++;
+            }
 
             monstersOnFloor.push({
                 x: x, y: y, name: typeData.name, hp: typeData.hp, atk: typeData.atk, def: typeData.def, xp: typeData.xp, gold: typeData.gold,
@@ -1195,6 +1250,8 @@ function handleCollisions() {
 
         for (let j = monsters.length - 1; j >= 0; j--) {
             const m = monsters[j];
+            if (m.isSpawning) continue; // Ignora i mostri in fase di spawn
+            
             if (p.checkCollision(m)) {
                 const damageDealt = m.takeDamage(p.damage);
                 if (damageDealt > 0) {
@@ -1254,7 +1311,10 @@ function handleCollisions() {
 
 function checkFloorCompletion() {
     if (currentDungeonFloor.type === 'monster' || currentDungeonFloor.type === 'boss' || currentDungeonFloor.type === 'preBoss') {
-        if (monsters.length === 0 && !currentDungeonFloor.cleared) {
+        // Conta solo i mostri non in fase di spawn
+        const activeMonsters = monsters.filter(m => !m.isSpawning);
+        
+        if (activeMonsters.length === 0 && !currentDungeonFloor.cleared) {
             currentDungeonFloor.cleared = true;
             updateGameMessage(`Piano ${currentFloor + 1} completato!`);
             
