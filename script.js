@@ -51,7 +51,7 @@ const PROJECTILE_SIZE = 8;
 const PLAYER_BASE_SPEED = 3;
 const PROJECTILE_SPEED = 8;
 const ROOM_BUFFER = 50;
-const SPAWN_SAFE_ZONE = 150; // Zona sicura attorno al giocatore dove i mostri non spawnano
+const SPAWN_SAFE_ZONE = 150;
 
 const TOWER_HEIGHT = 100;
 const BOSS_FLOOR_INTERVAL = 10;
@@ -82,7 +82,7 @@ const monstersData = {
     orc: { name: "Orco Bruto", hp: 90, atk: 15, def: 4, xp: 40, gold: 20, color: 'green', speed: 1.6, cooldown: 300, maxHp: 90, abilityType: 'aoe_stomp', abilityValue: 100, abilityCooldown: 280 },
     skeleton: { name: "Scheletro Rianimato", hp: 65, atk: 12, def: 4, xp: 30, gold: 15, color: 'lightgray', speed: 2.5, cooldown: 180, maxHp: 65, abilityType: 'speed_boost', abilityValue: 1.5, abilityDuration: 120, abilityCooldown: 350 },
     ghoul: { name: "Ghoul Affamato", hp: 80, atk: 13, def: 5, xp: 35, gold: 18, color: 'brown', speed: 1.7, cooldown: 220, maxHp: 80, abilityType: 'push_back', abilityValue: 150, abilityCooldown: 280 },
-    necromancer: { name: "Necromante Oscuro", hp: 250, atk: 23, def: 13, xp: 50, gold: 25, color: 'indigo', speed: 1.2, cooldown: 380, maxHp: 250, abilityType: 'spawn_minions', abilityValue: 2, abilityCooldown: 280 },
+    necromancer: { name: "Necromante Oscuro", hp: 250, atk: 15, def: 12, xp: 50, gold: 25, color: 'indigo', speed: 1.2, cooldown: 380, maxHp: 250, abilityType: 'spawn_minions', abilityValue: 2, abilityCooldown: 280 },
     dwarf: { name: "Nano Berserker", hp: 1, atk: 30, def: 0, xp: 15, gold: 8, color: 'red', speed: 5, cooldown: 150, maxHp: 1, abilityType: null },
     dragon: { name: "Drago Antico", hp: 500, atk: 70, def: 60, xp: 500, gold: 200, color: 'darkred', speed: 1.0, cooldown: 300, maxHp: 500, abilityType: ['fire_breath', 'flame_patch'], abilityValue: [15, 15], abilityCooldown: [300, 350] },
     orc_boss: { name: "Orco Capo", hp: 300, atk: 25, def: 7, xp: 150, gold: 80, color: 'darkgreen', speed: 1.5, cooldown: 280, maxHp: 300, abilityType: ['aoe_stomp', 'charge'], abilityValue: [100, 0], abilityCooldown: [280, 350] },
@@ -539,11 +539,10 @@ class Monster extends Entity {
         this.originalColor = typeData.color;
         this.originalSpeed = typeData.speed;
         
-        // Aggiunte per effetto di spawn
-        this.spawnTimer = 60; // Timer di spawn (1 secondo a 60fps)
+        this.spawnTimer = 60;
         this.isSpawning = true;
         this.spawnEffectSize = 0;
-        this.isInvincible = true; // Invincibile durante lo spawn
+        this.isInvincible = true;
 
         this.abilityType = Array.isArray(typeData.abilityType) ? typeData.abilityType : (typeData.abilityType ? [typeData.abilityType] : []);
         this.abilityValue = typeData.abilityValue;
@@ -567,16 +566,15 @@ class Monster extends Entity {
     }
 
     update() {
-        // Gestione dello spawn
         if (this.isSpawning) {
             this.spawnTimer--;
             this.spawnEffectSize = (1 - this.spawnTimer / 60) * this.size * 2;
             
             if (this.spawnTimer <= 0) {
                 this.isSpawning = false;
-                this.isInvincible = false; // Non più invincibile
+                this.isInvincible = false;
             }
-            return; // Non fare nulla finché non è completamente spawnato
+            return;
         }
 
         this.updateStatusEffects();
@@ -658,7 +656,7 @@ class Monster extends Entity {
 
             if (this.abilityType.includes('wind_fury') && this.currentAbilityDuration > 0) {
                 const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
-                const abilityData = monstersData['druid'].abilityValue;
+                const abilityData = this.abilityValue; // Usa il valore dell'abilità del mostro
                 const windEffectRange = abilityData.effectSize;
                 const pushbackForce = abilityData.pushbackForce;
                 const damagePerTick = abilityData.damage;
@@ -703,7 +701,7 @@ class Monster extends Entity {
                 break;
             case 'wind_fury':
                 if (this.distanceTo(player) < 200 && !player.isInvincible && this.currentAbilityDuration <= 0) {
-                    const abilityData = monstersData['druid'].abilityValue;
+                    const abilityData = this.abilityValue;
                     this.currentAbilityDuration = abilityData.effectDuration;
                     this.applyStatusEffect('wind_fury_color', this.currentAbilityDuration, 'lightblue');
                     updateGameMessage(`${this.name} scatena la Furia del Vento!`);
@@ -748,17 +746,20 @@ class Monster extends Entity {
                 break;
             case 'spawn_minions':
                 if (currentDungeonFloor.activeMonsters.length < 6) {
-                    const minionData = {...monstersData.skeleton};
-                    minionData.hp = Math.floor(minionData.hp * 0.5);
-                    minionData.atk = Math.floor(minionData.atk * 0.7);
-                    minionData.def = Math.floor(minionData.def * 0.5);
-                    minionData.maxHp = minionData.hp;
+                    for (let i = 0; i < value; i++) {
+                        const minionData = {...monstersData.skeleton};
+                        minionData.hp = Math.floor(minionData.hp * 0.5);
+                        minionData.atk = Math.floor(minionData.atk * 0.7);
+                        minionData.def = Math.floor(minionData.def * 0.5);
+                        minionData.maxHp = minionData.hp;
 
-                    const spawnX = this.x + rand(-50, 50);
-                    const spawnY = this.y + rand(-50, 50);
-                    const newMinion = new Monster(spawnX, spawnY, minionData);
-                    currentDungeonFloor.activeMonsters.push(newMinion);
-                    updateGameMessage(`${this.name} ha evocato un mini-scheletro!`);
+                        const spawnX = this.x + rand(-50, 50);
+                        const spawnY = this.y + rand(-50, 50);
+                        const newMinion = new Monster(spawnX, spawnY, minionData);
+                        currentDungeonFloor.activeMonsters.push(newMinion);
+                        monsters.push(newMinion); // Aggiungi anche all'array globale
+                    }
+                    updateGameMessage(`${this.name} ha evocato ${value} mini-scheletri!`);
                 }
                 break;
             case 'charge':
@@ -781,21 +782,21 @@ class Monster extends Entity {
                 if (this.distanceTo(player) < 300 && !player.isInvincible) {
                     const flameSize = 60;
                     const flameDuration = 180;
-                    const flameDamage = this.atk * 0.1;
+                    const flameDamage = value; // Usa il valore come danno
                     floorEffects.push(new FloorEffect(player.x + rand(-20, 20), player.y + rand(-20, 20), flameSize, 'orange', flameDuration, 'fire', flameDamage));
                     updateGameMessage(`${this.name} ha sputato fiamme a terra!`);
                 }
                 break;
             case 'earthquake':
-                floorEffects.push(new FloorEffect(this.x, this.y, value * 2, 'rgba(139, 69, 19, 0.5)', 20, 'stomp_aoe', this.atk * 0.8));
-                 updateGameMessage(`${this.name} scatena un Terremoto!`);
+                floorEffects.push(new FloorEffect(this.x, this.y, value * 2, 'rgba(139, 69, 19, 0.5)', 20, 'stomp_aoe', value));
+                updateGameMessage(`${this.name} scatena un Terremoto!`);
                 break;
             case 'rock_barrier':
                 this.applyStatusEffect('defense_boost', 180, 0.5);
                 updateGameMessage(`${this.name} si protegge con una Barriera di Roccia!`);
                 break;
             case 'ice_nova':
-                floorEffects.push(new FloorEffect(this.x, this.y, 250, 'rgba(0, 191, 255, 0.4)', 120, 'ice', this.atk * 0.4));
+                floorEffects.push(new FloorEffect(this.x, this.y, 250, 'rgba(0, 191, 255, 0.4)', 120, 'ice', value));
                 updateGameMessage(`${this.name} scatena una Nova di Ghiaccio!`);
                 break;
             case 'summon_ghosts':
@@ -804,12 +805,13 @@ class Monster extends Entity {
                     ghostData.hp *= 1.5;
                     ghostData.atk *= 1.5;
                     ghostData.def *= 1.2;
-                    ghostData.maxHp = ghostData.hp;
+                    ghostData.maxHp = ghostData.hp; // Aggiorna maxHp
                     
                     const spawnX = this.x + rand(-100, 100);
                     const spawnY = this.y + rand(-100, 100);
                     const newGhost = new Monster(spawnX, spawnY, ghostData);
                     currentDungeonFloor.activeMonsters.push(newGhost);
+                    monsters.push(newGhost); // Aggiungi anche all'array globale
                 }
                 updateGameMessage(`${this.name} ha evocato ${value} fantasmi!`);
                 break;
@@ -849,12 +851,12 @@ class Monster extends Entity {
             case 'triple_fireball':
                 for (let i = -1; i <= 1; i++) {
                     const angle = Math.atan2(player.y - this.y, player.x - this.x) + i * 0.3;
-                    projectiles.push(new Projectile(this.x, this.y, angle, this.atk * 0.7, 'orangered', true, 15, 4));
+                    projectiles.push(new Projectile(this.x, this.y, angle, value, 'orangered', true, 15, 4));
                 }
                 updateGameMessage(`${this.name} lancia tre Palle di Fuoco!`);
                 break;
             case 'lava_pool':
-                floorEffects.push(new FloorEffect(player.x, player.y, value, 'rgba(255, 69, 0, 0.5)', 180, 'fire', this.atk * 0.15));
+                floorEffects.push(new FloorEffect(player.x, player.y, value, 'rgba(255, 69, 0, 0.5)', 180, 'fire', value));
                 updateGameMessage(`${this.name} crea una Pozza di Lava!`);
                 break;
             case 'holy_beam':
@@ -867,14 +869,14 @@ class Monster extends Entity {
                 updateGameMessage(`${this.name} apre le ali oscure e accelera!`);
                 break;
             case 'chaos_blast':
-                floorEffects.push(new FloorEffect(this.x, this.y, value * 2, 'rgba(138, 43, 226, 0.6)', 25, 'chaos', this.atk * 1.2));
+                floorEffects.push(new FloorEffect(this.x, this.y, value * 2, 'rgba(138, 43, 226, 0.6)', 25, 'chaos', value));
                 updateGameMessage(`${this.name} rilascia un'Esplosione del Caos!`);
                 break;
             case 'dimensional_rift':
                 for (let i = 0; i < 3; i++) {
                     const riftX = player.x + rand(-150, 150);
                     const riftY = player.y + rand(-150, 150);
-                    floorEffects.push(new FloorEffect(riftX, riftY, value, 'rgba(0, 0, 0, 0.7)', 200, 'void', this.atk * 0.3));
+                    floorEffects.push(new FloorEffect(riftX, riftY, value, 'rgba(0, 0, 0, 0.7)', 200, 'void', value));
                 }
                 updateGameMessage(`${this.name} apre Fessure Dimensionali!`);
                 break;
@@ -883,13 +885,11 @@ class Monster extends Entity {
 
     draw() {
         if (this.isSpawning) {
-            // Disegna l'effetto di spawn
             ctx.fillStyle = `rgba(255, 255, 255, ${this.spawnTimer / 120})`;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.spawnEffectSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // Disegna una preview del mostro semi-trasparente
             ctx.globalAlpha = 0.5;
             super.draw();
             ctx.globalAlpha = 1.0;
@@ -1001,7 +1001,6 @@ class DungeonFloor {
         if (floorNumber === 0) {
             this.type = 'start';
             this.cleared = true;
-            // Non generiamo il portale qui, verrà generato quando il piano sarà completato
         } else if ((floorNumber + 1) % 10 === 0) {
             this.type = 'boss';
             this.initialMonsters = this.generateBossMonsters(floorNumber);
@@ -1009,7 +1008,6 @@ class DungeonFloor {
             this.type = 'merchant';
             this.initialMonsters = [];
             this.cleared = true;
-            // Non generiamo il portale qui, verrà generato dopo il negozio
         } else if ((floorNumber + 1) % 10 === 9) {
             this.type = 'preBoss';
             this.initialMonsters = this.generateMonsters(floorNumber);
@@ -1047,7 +1045,6 @@ class DungeonFloor {
             monsterPool = ['slime', 'druid', 'orc', 'skeleton', 'ghoul', 'necromancer', 'dwarf'];
         }
 
-        // Area sicura intorno al giocatore (nessun mostro spawnerà qui)
         const playerCenterX = CANVAS_WIDTH / 2;
         const playerCenterY = CANVAS_HEIGHT / 2 + 50;
 
@@ -1063,7 +1060,6 @@ class DungeonFloor {
             typeData.xp = Math.floor(typeData.xp * floorMultiplier);
             typeData.gold = Math.floor(typeData.gold * floorMultiplier);
 
-            // Trova una posizione sicura lontano dal giocatore
             let x, y;
             let validPosition = false;
             let attempts = 0;
@@ -1072,7 +1068,6 @@ class DungeonFloor {
                 x = rand(ROOM_BUFFER, CANVAS_WIDTH - ROOM_BUFFER);
                 y = rand(ROOM_BUFFER, CANVAS_HEIGHT - ROOM_BUFFER);
                 
-                // Verifica la distanza dal giocatore
                 const dx = x - playerCenterX;
                 const dy = y - playerCenterY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1203,7 +1198,6 @@ function loadFloor(floorNum) {
     player.y = CANVAS_HEIGHT / 2 + 50;
     player.isTransitioning = false;
 
-    // Genera il portale per il piano iniziale (non ha mostri)
     if (currentDungeonFloor.type === 'start') {
         currentDungeonFloor.generatePortal();
     }
@@ -1255,7 +1249,7 @@ function handleCollisions() {
 
         for (let j = monsters.length - 1; j >= 0; j--) {
             const m = monsters[j];
-            if (m.isSpawning) continue; // Ignora i mostri in fase di spawn
+            if (m.isSpawning) continue;
             
             if (p.checkCollision(m)) {
                 const damageDealt = m.takeDamage(p.damage);
@@ -1268,6 +1262,10 @@ function handleCollisions() {
                     player.addXP(m.xp);
                     player.gold += m.gold;
                     updateHUD();
+                    
+                    // Rimuovi da entrambi gli array
+                    const indexInActive = currentDungeonFloor.activeMonsters.indexOf(m);
+                    if (indexInActive !== -1) currentDungeonFloor.activeMonsters.splice(indexInActive, 1);
                     monsters.splice(j, 1);
                 }
 
@@ -1302,11 +1300,9 @@ function handleCollisions() {
         }
     }
 
-    // CORREZIONE PRINCIPALE: Controllo aggiuntivo per il portale
     if (currentDungeonFloor.cleared && currentDungeonFloor.portal) {
         const portal = currentDungeonFloor.portal;
         if (portal.checkCollision(player) && !player.isTransitioning) {
-            // Verifica che non ci siano mostri prima di procedere
             if (monsters.length > 0) {
                 updateGameMessage("Devi sconfiggere tutti i mostri prima di procedere!");
                 return;
@@ -1320,13 +1316,11 @@ function handleCollisions() {
     }
 }
 
-// FUNZIONE MODIFICATA: checkFloorCompletion
 function checkFloorCompletion() {
     if (currentDungeonFloor.type === 'monster' || 
         currentDungeonFloor.type === 'boss' || 
         currentDungeonFloor.type === 'preBoss') {
         
-        // Controlliamo l'intero array monsters senza filtri
         if (monsters.length === 0 && !currentDungeonFloor.cleared) {
             currentDungeonFloor.cleared = true;
             updateGameMessage(`Piano ${currentFloor + 1} completato!`);
@@ -1676,7 +1670,6 @@ function updateGameMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('game-message');
     
-    // Aggiungi un'icona per i messaggi importanti
     if (message.includes("Devi sconfiggere")) {
         messageElement.innerHTML = '⚠️ ' + message;
         messageElement.classList.add('warning-message');
@@ -1773,7 +1766,6 @@ function exitMerchant() {
     hideAllScreens();
     gameState = 'playing';
     
-    // Genera il portale dopo aver lasciato il negozio
     currentDungeonFloor.generatePortal('merchant');
     
     startGameLoop();
